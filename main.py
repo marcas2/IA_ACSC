@@ -28,8 +28,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from config import API_HOST, API_PORT, API_TITLE, API_VERSION
 from models.valvulopatia_model import get_model, reload_model
-from services.diagnosis_service import run_diagnosis
-from services.metrics_service import get_metrics_history, run_evaluation
+from reentrena.diagnosis_service import run_diagnosis
+from reentrena.metrics_service import get_metrics_history, run_evaluation
 from services.new_sample_service import process_new_training_sample
 from services.train_service import run_full_training
 
