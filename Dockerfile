@@ -17,6 +17,6 @@ COPY . .
 # Crear directorios necesarios
 RUN mkdir -p models data/reports
 
-EXPOSE 8000
+EXPOSE 5000
 
 CMD ["python", "main.py"]

@@ -6,12 +6,12 @@ services:
     container_name: valvia-api
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "5000:5000"
     environment:
       # URL del servidor local de sonidos (red interna)
       LOCAL_SERVER_BASE_URL: "http://172.16.10.200:5002"
       API_HOST: "0.0.0.0"
-      API_PORT: "8000"
+      API_PORT: "5000"
     volumes:
       # Persistencia del modelo entrenado y métricas
       - valvia_models:/app/models

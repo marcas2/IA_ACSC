@@ -49,4 +49,4 @@ LABEL_ANOMALIA = "Anomalia"
 API_TITLE   = "ValvIA - Sistema de Detección de Valvulopatías"
 API_VERSION = "1.0.0"
 API_HOST    = os.getenv("API_HOST", "0.0.0.0")
-API_PORT    = int(os.getenv("API_PORT", "8000"))
+API_PORT    = int(os.getenv("API_PORT", "5000"))
