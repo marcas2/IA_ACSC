@@ -13,10 +13,13 @@ Endpoints:
 """
 import json
 import logging
+import math
 import os
 import sys
 from contextlib import asynccontextmanager
 from typing import Optional
+
+import numpy as np
 
 import uvicorn
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, BackgroundTasks
@@ -40,6 +43,33 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S"
 )
 logger = logging.getLogger("valvia.api")
+
+
+def _sanitize_json_payload(value):
+    """Asegura compatibilidad JSON estricta: convierte NaN/Infinity a None."""
+    if isinstance(value, dict):
+        return {str(k): _sanitize_json_payload(v) for k, v in value.items()}
+
+    if isinstance(value, list):
+        return [_sanitize_json_payload(v) for v in value]
+
+    if isinstance(value, tuple):
+        return [_sanitize_json_payload(v) for v in value]
+
+    if isinstance(value, np.ndarray):
+        return [_sanitize_json_payload(v) for v in value.tolist()]
+
+    if isinstance(value, np.integer):
+        return int(value)
+
+    if isinstance(value, np.floating):
+        fval = float(value)
+        return fval if math.isfinite(fval) else None
+
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+
+    return value
 
 
 # ── Startup / Shutdown ────────────────────────────────────────────────────────
@@ -242,25 +272,18 @@ async def diagnose(
 # ─────────────────────────────────────────────────────────────────────────────
 @app.get("/api/v1/metrics", tags=["Evaluación"])
 async def evaluate_model():
-    """
-    Evalúa el modelo con los datos actuales del servidor local.
-    Genera métricas completas: accuracy, F1, ROC-AUC, matriz de confusión
-    y validación cruzada estratificada.
-    
-    También genera y guarda gráficas en el servidor (carpeta data/reports/).
-    """
     try:
         result = run_evaluation()
-        return JSONResponse(content=result)
+        clean_result = _sanitize_json_payload(result)
+        return JSONResponse(content=clean_result)
     except Exception as e:
         logger.exception("Error en evaluación")
-        raise HTTPException(status_code=500, detail=str(e))
-
+        raise HTTPException(status_code=500, detail=f"Error evaluando métricas: {str(e)}")
 
 @app.get("/api/v1/metrics/history", tags=["Evaluación"])
 async def metrics_history():
     """Retorna el historial completo de evaluaciones del modelo."""
-    return JSONResponse(content=get_metrics_history())
+    return JSONResponse(content=_sanitize_json_payload(get_metrics_history()))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
