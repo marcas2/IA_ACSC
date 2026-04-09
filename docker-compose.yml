@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  valvia-api:
+    build: .
+    container_name: valvia-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # URL del servidor local de sonidos (red interna)
+      LOCAL_SERVER_BASE_URL: "http://172.16.10.200:5002"
+      API_HOST: "0.0.0.0"
+      API_PORT: "8000"
+    volumes:
+      # Persistencia del modelo entrenado y métricas
+      - valvia_models:/app/models
+      - valvia_data:/app/data
+    networks:
+      - valvia-net
+    # Si el servidor nube tiene acceso directo a la LAN del servidor local
+    # (VPN, túnel, etc.), no se necesita nada más.
+    # Si no hay acceso directo, usar extra_hosts:
+    # extra_hosts:
+    #   - "servidor-local:172.16.10.200"
+
+volumes:
+  valvia_models:
+  valvia_data:
+
+networks:
+  valvia-net:
+    driver: bridge
