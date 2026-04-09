@@ -172,6 +172,15 @@ def run_full_training() -> Dict:
     # Cargar dataset
     X, labels, metas = load_dataset_from_server()
 
+    normal_count = labels.count(LABEL_NORMAL)
+    anomalia_count = labels.count(LABEL_ANOMALIA)
+    if normal_count == 0 or anomalia_count == 0:
+        raise ValueError(
+            "No se puede entrenar el modelo porque solo hay una clase en el dataset. "
+            f"Normal={normal_count}, Anomalia={anomalia_count}. "
+            "Agregue muestras de la clase faltante y vuelva a ejecutar /api/v1/train/full."
+        )
+
     # Validación cruzada ANTES de entrenar el modelo final
     cv_metrics = {}
     if len(X) >= 4:

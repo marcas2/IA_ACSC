@@ -118,6 +118,14 @@ class ValvulopatiaModel:
         if len(X) < 2:
             raise ValueError("Se necesitan al menos 2 muestras para entrenar.")
 
+        unique_labels = sorted(set(y_labels))
+        if len(unique_labels) < 2:
+            raise ValueError(
+                "No se puede entrenar con una sola clase. "
+                f"Clases detectadas: {unique_labels}. "
+                "Agregue muestras de al menos dos clases (Normal y Anomalia)."
+            )
+
         y = self.label_encoder.fit_transform(y_labels)
         self._feature_dim = X.shape[1]
 
