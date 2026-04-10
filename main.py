@@ -224,6 +224,7 @@ async def train_new_sample(
 async def diagnose(
     json_metadata: str = Form(..., description="JSON clínico del paciente"),
     audio:         UploadFile = File(..., description="Audio cardiaco WAV"),
+    audio_ecg:     Optional[UploadFile] = File(None, description="Audio ECG opcional WAV"),
 ):
     """
     **SERVICIO 3** — Análisis diagnóstico de valvulopatía.
@@ -250,12 +251,16 @@ async def diagnose(
         raise HTTPException(status_code=400, detail="Solo se aceptan archivos WAV.")
 
     wav_bytes = await audio.read()
+    wav_ecg_bytes = await audio_ecg.read() if audio_ecg else None
+    wav_ecg_filename = audio_ecg.filename if audio_ecg else None
 
     try:
         result = run_diagnosis(
             json_data=metadata,
             wav_bytes=wav_bytes,
-            wav_filename=audio.filename
+            wav_filename=audio.filename,
+            wav_ecg_bytes=wav_ecg_bytes,
+            wav_ecg_filename=wav_ecg_filename,
         )
         return JSONResponse(content=result)
     except RuntimeError as e:

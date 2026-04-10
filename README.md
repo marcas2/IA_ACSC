@@ -165,6 +165,9 @@ Content-Type: multipart/form-data
 |-------|------|-----------|-------------|
 | `json_metadata` | string (JSON) | ✅ | Metadatos del paciente (sin diagnóstico) |
 | `audio` | file (.wav) | ✅ | Fonocardiograma a analizar |
+| `audio_ecg` | file (.wav) | ❌ | Audio ECG opcional para compatibilidad con modelos entrenados con 453 features |
+
+Si el modelo fue entrenado con esquema extendido (incluye ECG), enviar `audio_ecg` mejora la compatibilidad y estabilidad del diagnóstico.
 
 **Respuesta:**
 ```json

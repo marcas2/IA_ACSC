@@ -22,6 +22,8 @@ def run_diagnosis(
     json_data: dict,
     wav_bytes: bytes,
     wav_filename: str,
+    wav_ecg_bytes: Optional[bytes] = None,
+    wav_ecg_filename: Optional[str] = None,
 ) -> Dict:
     """
     Punto de entrada del SERVICIO 3.
@@ -61,12 +63,53 @@ def run_diagnosis(
         content_type="application/json"
     )
 
+    # ECG opcional (si se envía en diagnóstico)
+    ecg_uploaded = None
+    if wav_ecg_bytes and wav_ecg_filename:
+        ecg_uploaded = upload_file(
+            REMOTE_FOLDERS["audio_ecg"],
+            wav_ecg_filename,
+            wav_ecg_bytes,
+            content_type="audio/wav"
+        )
+
     # ── 2. Extracción de características ──────────────────────────────────────
     y_audio = load_audio_from_bytes(wav_bytes)
     if y_audio is None:
         raise ValueError("No se pudo procesar el archivo de audio.")
 
-    feat_vector = build_full_feature_vector(y_audio, json_data, y_ecg=None)
+    y_ecg = None
+    if wav_ecg_bytes:
+        y_ecg = load_audio_from_bytes(wav_ecg_bytes)
+
+    feat_vector = build_full_feature_vector(y_audio, json_data, y_ecg=y_ecg)
+
+    expected_dim = getattr(model, "_feature_dim", None)
+    if expected_dim is None and hasattr(model, "scaler"):
+        expected_dim = getattr(model.scaler, "n_features_in_", None)
+
+    feature_adjustment = {
+        "aplicado": False,
+        "expected_features": int(expected_dim) if expected_dim is not None else None,
+        "received_features": int(feat_vector.shape[0]),
+        "estrategia": None,
+    }
+
+    # Caso común: modelo entrenado con ECG (453) y diagnóstico sin ECG (210).
+    # Se construye un ECG sintético usando el audio principal para mantener compatibilidad dimensional.
+    if expected_dim and feat_vector.shape[0] != expected_dim:
+        if y_ecg is None and feat_vector.shape[0] == 210 and expected_dim == 453:
+            feat_vector = build_full_feature_vector(y_audio, json_data, y_ecg=y_audio)
+            feature_adjustment["aplicado"] = True
+            feature_adjustment["received_features"] = int(feat_vector.shape[0])
+            feature_adjustment["estrategia"] = "fallback_ecg_from_main_audio"
+
+    if expected_dim and feat_vector.shape[0] != expected_dim:
+        raise ValueError(
+            "Dimensión de features incompatible para diagnóstico. "
+            f"Modelo espera {expected_dim} y se generaron {feat_vector.shape[0]}. "
+            "Envíe también audio_ecg o reentrene el modelo con el mismo esquema de features."
+        )
 
     # ── 3. Inferencia ─────────────────────────────────────────────────────────
     resultado = model.predict_single(feat_vector)
@@ -101,6 +144,13 @@ def run_diagnosis(
         "almacenamiento": {
             "audio_guardado": audio_uploaded,
             "json_guardado":  json_uploaded,
+            "ecg_guardado": ecg_uploaded,
+        },
+        "compatibilidad_features": {
+            "expected_features": feature_adjustment["expected_features"],
+            "received_features": feature_adjustment["received_features"],
+            "ajuste_aplicado": feature_adjustment["aplicado"],
+            "estrategia": feature_adjustment["estrategia"],
         }
     }
 
